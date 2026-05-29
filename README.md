@@ -1,6 +1,6 @@
 # NiceSkills
 
-Small, focused skills written to meet ad-hoc needs. Each one is self-contained and adaptable — drop them into any Claude setup.
+Small, focused skills written to meet ad-hoc needs. Each one is self-contained and adaptable.
 
 ## Skills
 
