@@ -1,12 +1,24 @@
-# NiceSkills
+<p>
+  <a href="https://sprettynice.com">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="https://sprettynice.com/github/img/logo-light.png">
+      <source media="(prefers-color-scheme: light)" srcset="https://sprettynice.com/github/img/logo-dark.png">
+      <img alt="NiceSkills" src="https://sprettynice.com/github/img/logo-dark.png" width="220">
+    </picture>
+  </a>
+</p>
 
-Small, focused skills written to meet ad-hoc needs. Each one is self-contained and adaptable — drop them into any Claude setup.
+<p align="center">Small, focused skills written to meet ad-hoc needs. Each one is self-contained and adaptable — drop them into any Claude setup.</p>
 
 ## Skills
 
-**[build-context](build-context/)** — Generates a `CONTEXT.md` glossary that aligns a codebase, its developers, and domain experts around shared language. Run it at any point in a project to formalise the vocabulary that's accumulated in conversation and code. Inspired by the usage of context files in the excellent skills [by Matt Pocock](https://github.com/mattpocock/skills).
+**[build-context](build-context/)** — Generates a `CONTEXT.md` glossary that aligns a codebase, its developers, and domain experts around shared language. Run it at any point in a green- or brown-field project to formalise the vocabulary that's accumulated in conversation and code. Inspired by the usage of context files in the excellent skills [by Matt Pocock](https://github.com/mattpocock/skills).
+
+In any project that involves an AI, you spend tokens re-explaining jargon every session. "The funnel" means something specific in your product, "a subscriber" has a precise definition your team argues about, "materialization" is a term of art that took months to coin. Without a shared glossary, the AI guesses — uses 20 words where 1 would do, names things inconsistently, misses the nuance domain experts take for granted. A formalised conext document pays for itself within a few sessions.
 
 **[response-analysis](response-analysis/)** — Scores qualitative responses (interviews, surveys, support tickets) on sentiment, pain level, and excitement about a solution. Each score is backed by verbatim quotes from the source.
+
+Qualitative feedback is hard to act on at scale. Anyone who's done user research knows the feeling, you have 20 interview transcripts and a stakeholder asking "so what do people think?" The temptation is to pattern-match on memorable quotes and call it insight. This skill forces evidence-backed scoring so gut feeling cannot masquerade as analysis. The three dimensions are also deliberately separate: a frustrated customer can be genuinely excited about a fix, and conflating the two is how bad product decisions get made.
 
 ## Session hygiene
 
