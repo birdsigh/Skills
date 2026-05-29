@@ -8,7 +8,7 @@
   </a>
 </p>
 
-<p align="center">Small, focused skills written to meet ad-hoc needs. Each one is self-contained and adaptable — drop them into any Claude setup.</p>
+<p align="center">Small, focused skills written to meet ad-hoc needs. Each one is self-contained and adaptable.</p>
 
 ## Skills
 
