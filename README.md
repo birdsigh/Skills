@@ -10,7 +10,7 @@
 
 <p align="center">Small, focused skills written to meet ad-hoc needs. Each one is self-contained and adaptable.</p>
 
-## Skills
+## NiceSkills
 
 **[build-context](build-context/)** — Generates a `CONTEXT.md` glossary that aligns a codebase, its developers, and domain experts around shared language. Run it at any point in a green- or brown-field project to formalise the vocabulary that's accumulated in conversation and code. Inspired by the usage of context files in the excellent skills [by Matt Pocock](https://github.com/mattpocock/skills).
 
