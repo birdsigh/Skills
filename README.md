@@ -14,7 +14,7 @@
 
 **[build-context](build-context/)** — Generates a `CONTEXT.md` glossary that aligns a codebase, its developers, and domain experts around shared language. Run it at any point in a green- or brown-field project to formalise the vocabulary that's accumulated in conversation and code. Inspired by the usage of context files in the excellent skills [by Matt Pocock](https://github.com/mattpocock/skills).
 
-In any project that involves an AI, you spend tokens re-explaining jargon every session. "The funnel" means something specific in your product, "a subscriber" has a precise definition your team argues about, "materialization" is a term of art that took months to coin. Without a shared glossary, the AI guesses — uses 20 words where 1 would do, names things inconsistently, misses the nuance domain experts take for granted. A formalised conext document pays for itself within a few sessions.
+In any project that involves an AI, you spend tokens re-explaining jargon every session. "The funnel" means something specific in your product, "a subscriber" has a precise definition your team argues about, "materialization" is a term of art that took months to coin. Without a shared glossary, the AI guesses — uses 20 words where 1 would do, names things inconsistently, misses the nuance domain experts take for granted. A formalised context document pays for itself within a few sessions.
 
 **[be-concise](be-concise/)** — Tells the model to give answers, not essays: sacrifice grammar for concision where it doesn't cost critical detail. Invoke it mid-session when you're deep in back-and-forth debugging and every reply is arriving wrapped in three paragraphs of preamble.
 
