@@ -8,7 +8,15 @@
   </a>
 </p>
 
+[![skills.sh](https://skills.sh/b/birdsigh/skills)](https://skills.sh/birdsigh/skills)
+
 <p align="center">Small, focused skills written to meet ad-hoc needs. Each one is self-contained and adaptable.</p>
+
+## Installation
+
+```bash
+npx skills@latest add birdsigh/skills
+```
 
 ## NiceSkills
 
