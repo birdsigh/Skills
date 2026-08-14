@@ -31,6 +31,7 @@ Check the user's memory for project-specific context — stack names, system nam
 **Notes and files**
 If file access is available, look for:
 - Any existing glossary, README, or CONTEXT.md
+- Any `AGENTS.md` or `CLAUDE.md`. A core vocabulary section in one of these is a curated seed list — terms already derived from the project and filtered down to the ones that matter. Start from it rather than rediscovering the same terms
 - Project notes that use domain terms
 - Specification documents or briefs
 
@@ -108,10 +109,11 @@ _Avoid_: {comma-separated list of synonyms or near-synonyms to retire}
 
 ### 5. Present and package
 
-- If file tools are avaible then add it to the root of the curent project, otherwise produce the CONTEXT.md as a downloadable file
+- If file tools are available then add it to the root of the current project, otherwise produce the CONTEXT.md as a downloadable file
 - Briefly summarise what was captured: how many terms, any key decisions made during clarification
 - Note any terms that were deferred or need a follow-up (e.g. "We didn't nail down a definition for 'Reader' vs 'User' — worth revisiting")
 - Suggest the file lives at the root of the project repo, or alongside a README
+- If an `AGENTS.md` carries a vocabulary section, those terms are now duplicated here and the two copies will drift apart. List the overlapping terms and offer to cut that section down to a link to CONTEXT.md plus the few terms an agent needs loaded in every session. Ask first and wait for a yes: an instruction file is read on every run, and rewriting one uninvited is not this skill's job
 
 ---
 

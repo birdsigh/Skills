@@ -16,6 +16,12 @@
 
 In any project that involves an AI, you spend tokens re-explaining jargon every session. "The funnel" means something specific in your product, "a subscriber" has a precise definition your team argues about, "materialization" is a term of art that took months to coin. Without a shared glossary, the AI guesses — uses 20 words where 1 would do, names things inconsistently, misses the nuance domain experts take for granted. A formalised context document pays for itself within a few sessions.
 
+It and `agent-docs` know about each other. A vocabulary section in an existing AGENTS.md is treated as a seed list rather than rediscovered from scratch, and once the `CONTEXT.md` is written the skill offers to trim that section back to a pointer so the same terms aren't left drifting in two files. Run them in either order.
+
+**[agent-docs](agent-docs/)** — Writes the missing `README.md`, `AGENTS.md`, and `CLAUDE.md` for a project that already has something to document — code, a spec, a PRD. It surveys the project first and derives every line from what it finds, and it never touches a file that already exists.
+
+Docs tend to arrive by accident: a README written on day one and never revisited, an AGENTS.md pasted in from another repo. What you get is boilerplate that would be true of any repo on earth, which is worse than nothing once it's loaded into every session. The split is the useful part — README for people deciding whether to use the thing, AGENTS.md for agents changing it, CLAUDE.md as a one-line import so there's a single canonical source instead of three copies drifting apart. The handoff to `build-context` above follows the same principle. And if the project has no real source material yet, the skill refuses to write anything, on the grounds that docs invented from nothing are the problem it exists to avoid.
+
 **[be-concise](be-concise/)** — Tells the model to give answers, not essays: sacrifice grammar for concision where it doesn't cost critical detail. Invoke it mid-session when you're deep in back-and-forth debugging and every reply is arriving wrapped in three paragraphs of preamble.
 
 The skill itself is one sentence, which is the point. Verbosity compounds: long replies fill the context window, which degrades later output, which invites more back-and-forth. A standing instruction to compress is cheaper than editing every prompt to say "briefly".
