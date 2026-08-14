@@ -25,14 +25,14 @@ Resolve `<skill-dir>` as the directory containing this `SKILL.md`. Invoke every 
 
 ## Sensitive-content gate
 
-Use `<skill-dir>/scripts/check-sensitive-content.py` to block protected private-network product names, IP address literals, likely credentials or private keys, oversized files, recognized binary content or archives, sensitive filenames, and common generated artifacts. Scan at all four checkpoints:
+Use `<skill-dir>/scripts/check-sensitive-content.py` to block IP address literals, likely credentials or private keys, oversized files, archives, sensitive filenames, and common generated artifacts. Scan at all four checkpoints:
 
 1. Worktree before displaying changed paths: `<skill-dir>/scripts/check-sensitive-content.py --worktree`.
 2. Existing outgoing commits: `<skill-dir>/scripts/check-sensitive-content.py --range '@{upstream}..HEAD'`.
 3. Staged content before committing: `<skill-dir>/scripts/check-sensitive-content.py --staged`.
 4. Refreshed final outgoing range: `<skill-dir>/scripts/check-sensitive-content.py --range '@{upstream}..HEAD'`.
 
-The scanner checks the complete resulting blob and path for every added, modified, renamed, or copied file in scope. Its default size limit is 10 MiB. It reports only a redacted path, category, and line number; never print the matched value. Any match is blocking, including documentation, examples, tests, loopback, private, and public addresses. Stop and ask the user to remove the content or exclude the path. Never commit or push a flagged match. If the scanner cannot run or inspect a blob, stop rather than treating the scan as clean.
+The scanner checks the complete resulting blob and path for every added, modified, renamed, or copied file in scope. Its default size limit is 20 MiB. It reports only a redacted path, category, and line number; never print the matched value. Any match is blocking, including documentation, examples, tests, loopback, private, and public addresses. Stop and ask the user to remove the content or exclude the path. Never commit or push a flagged match. If the scanner cannot run or inspect a blob, stop rather than treating the scan as clean.
 
 ## 1. Inspect the repository
 

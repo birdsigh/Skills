@@ -14,7 +14,7 @@ sys.dont_write_bytecode = True
 from sensitive_rules import path_findings, redact, text_findings
 
 
-DEFAULT_MAX_BYTES = 10 * 1024 * 1024
+DEFAULT_MAX_BYTES = 20 * 1024 * 1024
 ARCHIVE_SIGNATURES = (
     b"PK\x03\x04",
     b"\x1f\x8b",
@@ -23,21 +23,6 @@ ARCHIVE_SIGNATURES = (
     b"7z\xbc\xaf\x27\x1c",
     b"Rar!\x1a\x07",
 )
-BINARY_SIGNATURES = (
-    b"%PDF-",
-    b"\x89PNG\r\n\x1a\n",
-    b"\xff\xd8\xff",
-    b"GIF87a",
-    b"GIF89a",
-    b"BM",
-    b"II*\x00",
-    b"MM\x00*",
-    b"\x7fELF",
-    b"MZ",
-    b"SQLite format 3\x00",
-)
-
-
 def git(*args: str) -> bytes:
     result = subprocess.run(
         ("git", *args),
@@ -115,26 +100,10 @@ def is_archive(data: bytes) -> bool:
     )
 
 
-def is_binary(data: bytes) -> bool:
-    if any(data.startswith(signature) for signature in BINARY_SIGNATURES):
-        return True
-    sample = data[:8192]
-    if b"\x00" in sample:
-        return True
-    try:
-        decoded = sample.decode("utf-8")
-    except UnicodeDecodeError:
-        return True
-    disallowed_controls = sum(ord(character) < 32 and character not in "\b\t\n\f\r" for character in decoded)
-    return bool(decoded) and disallowed_controls / len(decoded) > 0.01
-
-
 def blob_findings(data: bytes) -> set[tuple[str, int]]:
     matches: set[tuple[str, int]] = set()
     if is_archive(data):
         matches.add(("archive file", 1))
-    elif is_binary(data):
-        matches.add(("binary file", 1))
     matches.update(text_findings(data.decode("utf-8", errors="replace")))
     return matches
 

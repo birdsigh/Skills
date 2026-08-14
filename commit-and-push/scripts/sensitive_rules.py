@@ -7,7 +7,6 @@ from pathlib import PurePosixPath
 import re
 
 
-PROTECTED_TERMS = tuple("".join(parts) for parts in (("tail", "scale"), ("tail", "net")))
 IPV4_CANDIDATE = re.compile(r"(?<![0-9.])(?:[0-9]{1,3}\.){3}[0-9]{1,3}(?![0-9.])")
 IPV6_CANDIDATE = re.compile(
     r"(?<![0-9A-Fa-f:.])(?:[0-9A-Fa-f]{0,4}:){2,7}[0-9A-Fa-f]{0,4}(?![0-9A-Fa-f:.])"
@@ -67,13 +66,6 @@ def valid_ip(candidate: str) -> bool:
 
 def text_findings(text: str) -> set[tuple[str, int]]:
     matches: set[tuple[str, int]] = set()
-    lowered = text.lower()
-    for term in PROTECTED_TERMS:
-        start = 0
-        while (offset := lowered.find(term, start)) != -1:
-            matches.add(("protected network term", line_number(text, offset)))
-            start = offset + len(term)
-
     for category, pattern in (("IPv4 address", IPV4_CANDIDATE), ("IPv6 address", IPV6_CANDIDATE)):
         for match in pattern.finditer(text):
             if valid_ip(match.group()):
@@ -99,8 +91,6 @@ def path_findings(path: str) -> set[tuple[str, int]]:
 
 def redact(text: str) -> str:
     redacted = text
-    for term in PROTECTED_TERMS:
-        redacted = re.sub(re.escape(term), "[REDACTED]", redacted, flags=re.IGNORECASE)
     for pattern in (IPV4_CANDIDATE, IPV6_CANDIDATE):
         redacted = pattern.sub(
             lambda match: "[REDACTED]" if valid_ip(match.group()) else match.group(),
