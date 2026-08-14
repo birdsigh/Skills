@@ -42,7 +42,22 @@ Stop and report without staging, committing, or pushing when:
 
 When no upstream is configured, report the current branch and available remote names without printing potentially credential-bearing URLs. Do not run `git push -u` or create a remote branch.
 
-## 2. Fetch and inspect existing outgoing commits
+## 2. Check repository hook setup
+
+Look for repository-owned Git hook files or hook-manager configuration. Include conventions such as a configured hooks directory, Husky, pre-commit, Lefthook, or Overcommit. Do not treat Git's default `.git/hooks/*.sample` files as project hooks.
+
+Use repository instructions, setup documentation, package scripts, and manager configuration to determine how the hooks are intended to be activated. Inspect the effective `core.hooksPath`, the resolved Git hooks directory, and any relevant non-mutating hook-manager status check. Do not execute hook payloads merely to test setup.
+
+If repository hook sources or configuration exist but the intended hooks appear inactive, missing, misconfigured, or cannot be verified as active:
+
+- show the hook files or configuration found;
+- show the concise evidence that setup is absent, broken, or uncertain;
+- warn that committing without active project hooks may skip required checks;
+- ask whether to continue.
+
+Wait for explicit confirmation before continuing. This confirmation permits the workflow to continue without verified hooks; it does not authorize a push. Do not install, repair, copy, or reconfigure hooks unless the user separately requests it.
+
+## 3. Fetch and inspect existing outgoing commits
 
 Fetch the configured upstream remote before calculating outgoing commits. Fetch only: do not pull, merge, rebase, or prune.
 
@@ -70,7 +85,7 @@ If the existing outgoing range contains more than 50 files, use the large-change
 
 If the worktree is clean and outgoing commits exist, skip commit preparation and proceed to the final outgoing-range review. If the worktree is clean and there are no outgoing commits, stop and report that there is nothing to commit or push.
 
-## 3. Apply the large-change gate
+## 4. Apply the large-change gate
 
 Apply this gate separately to each changed-path set reviewed by the workflow: the existing outgoing range, the worktree, and the final outgoing range. Count logical paths, treating a rename as one path change.
 
@@ -84,7 +99,7 @@ When the count exceeds 50, stop and show:
 
 Ask whether to continue reviewing that large change set. For the worktree gate, wait for confirmation before staging or running potentially expensive verification. Approval of any large-change gate does not authorize a push.
 
-## 4. Resolve the commit scope
+## 5. Resolve the commit scope
 
 Account for every changed and untracked path. Inspect enough of each diff or file to determine what it appears to concern.
 
@@ -108,7 +123,7 @@ Do not mention ordinary ignored files unless they are suspiciously relevant to t
 
 If no intended uncommitted changes remain but confirmed outgoing commits exist, skip verification, staging, and commit creation unless repository instructions require otherwise. Proceed to the final outgoing-range review. If neither intended changes nor outgoing commits remain, stop and report that there is nothing to commit or push.
 
-## 5. Verify the intended changes
+## 6. Verify the intended changes
 
 Run the smallest relevant verification required by repository instructions or clearly implied by the changed files.
 
@@ -118,7 +133,7 @@ Run the smallest relevant verification required by repository instructions or cl
 - If verification fails, stop before committing and report the useful failure output.
 - Do not change code merely to silence an unrelated failure.
 
-## 6. Stage and review
+## 7. Stage and review
 
 Stage only the confirmed intended paths. Do not use blanket staging when unrelated changes exist.
 
@@ -131,7 +146,7 @@ Review the staged name/status summary and staged patch. Confirm that:
 
 If the staged scope differs materially from the confirmed scope, stop and explain the difference.
 
-## 7. Generate and create the commit
+## 8. Generate and create the commit
 
 Inspect recent commit subjects and follow the repository's established convention. Generate a concise message from the staged diff:
 
@@ -152,7 +167,7 @@ If verification, `git commit`, or a Git hook fails:
 - do not retry with `--no-verify`;
 - do not proceed to push.
 
-## 8. Recalculate the complete outgoing push
+## 9. Recalculate the complete outgoing push
 
 Fetch the configured upstream remote again immediately before calculating the final outgoing range. If the fetch fails, stop and report that the range cannot be verified reliably.
 
@@ -170,7 +185,7 @@ Determine:
 
 If the complete outgoing range now exceeds 50 files and that exact breadth was not already approved, apply the large-change gate again. Do not print an unbounded filename list; summarize it by status and coherent directory or area, then wait for confirmation to continue.
 
-## 9. Present the push summary
+## 10. Present the push summary
 
 Before every push, show a concise summary containing:
 
@@ -189,7 +204,7 @@ Ask: **Push these changes?** Wait for an explicit affirmative response. Neither 
 
 If confirmation is declined, leave the commit local and report that nothing was pushed.
 
-## 10. Push once
+## 11. Push once
 
 After explicit confirmation, run the previously displayed push command against the configured upstream. Never force-push.
 
