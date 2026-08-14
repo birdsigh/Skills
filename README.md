@@ -22,6 +22,10 @@ It and `agent-docs` know about each other. A vocabulary section in an existing A
 
 Docs tend to arrive by accident: a README written on day one and never revisited, an AGENTS.md pasted in from another repo. What you get is boilerplate that would be true of any repo on earth, which is worse than nothing once it's loaded into every session. The split is the useful part — README for people deciding whether to use the thing, AGENTS.md for agents changing it, CLAUDE.md as a one-line import so there's a single canonical source instead of three copies drifting apart. The handoff to `build-context` above follows the same principle. And if the project has no real source material yet, the skill refuses to write anything, on the grounds that docs invented from nothing are the problem it exists to avoid.
 
+**[commit-and-push](commit-and-push/)** — Reviews, verifies, commits, and pushes a repository's intended changes without disturbing unrelated work. It audits existing outgoing commits, requires a configured upstream, and asks for explicit confirmation immediately before every push.
+
+Publishing local work should be boring, but a casual `git add . && git push` quietly bundles unrelated edits, stale outgoing commits, generated files, or the wrong destination. This skill turns that boundary into a deliberate review: fetch first, account for every changed path, preserve user-owned staging, run focused checks, and show the complete push before anything leaves the machine. It never force-pushes or reconciles a diverged branch on the user's behalf.
+
 **[be-concise](be-concise/)** — Tells the model to give answers, not essays: sacrifice grammar for concision where it doesn't cost critical detail. Invoke it mid-session when you're deep in back-and-forth debugging and every reply is arriving wrapped in three paragraphs of preamble.
 
 The skill itself is one sentence, which is the point. Verbosity compounds: long replies fill the context window, which degrades later output, which invites more back-and-forth. A standing instruction to compress is cheaper than editing every prompt to say "briefly".
