@@ -1,11 +1,13 @@
 ---
 name: commit-and-push
-description: Safely review, verify, commit, and push intended repository changes to an established upstream branch. Use when the user invokes /commit-and-push, asks to commit and push current work, or requests publishing completed changes without creating a pull request.
+description: Safely review, verify, commit, and push intended repository changes to an established upstream branch, with sensitive-content gates. Use when the user invokes /commit-and-push, asks to commit and push current work, or requests publishing completed changes without creating a pull request.
 ---
 
 # Commit and push
 
 Review, verify, commit, and push the intended changes. Preserve unrelated work and require explicit approval before every push.
+
+Resolve `<skill-dir>` as the directory containing this `SKILL.md`. Invoke every bundled script by its absolute `<skill-dir>/scripts/...` path while keeping the target repository as the working directory. Never resolve `scripts/...` against the target repository or `PATH`. The scripts are read-only and never fetch, stage, commit, or push. Keep scope decisions, verification selection, commit-message judgment, and approvals in this workflow.
 
 ## Safety rules
 
@@ -15,40 +17,55 @@ Review, verify, commit, and push the intended changes. Preserve unrelated work a
 - Treat the existing index as user-owned state. Never alter pre-existing staging without explicit confirmation.
 - Never bypass Git hooks or verification with `--no-verify`.
 - Never pull, merge, rebase, amend, reset, force-push, or retry a rejected push as part of this workflow.
+- Treat any in-progress merge, rebase, cherry-pick, or revert as an absolute stop. Never resolve conflicts or run continue, skip, or abort commands for the user.
 - Never infer or create an upstream branch.
 - Never expose secret values when describing files or failures.
 - Treat the original invocation as permission to prepare a commit, not permission to push.
 - Require explicit confirmation immediately before every push.
 
+## Sensitive-content gate
+
+Use `<skill-dir>/scripts/check-sensitive-content.py` to block protected private-network product names, IP address literals, likely credentials or private keys, oversized files, recognized binary content or archives, sensitive filenames, and common generated artifacts. Scan at all four checkpoints:
+
+1. Worktree before displaying changed paths: `<skill-dir>/scripts/check-sensitive-content.py --worktree`.
+2. Existing outgoing commits: `<skill-dir>/scripts/check-sensitive-content.py --range '@{upstream}..HEAD'`.
+3. Staged content before committing: `<skill-dir>/scripts/check-sensitive-content.py --staged`.
+4. Refreshed final outgoing range: `<skill-dir>/scripts/check-sensitive-content.py --range '@{upstream}..HEAD'`.
+
+The scanner checks the complete resulting blob and path for every added, modified, renamed, or copied file in scope. Its default size limit is 10 MiB. It reports only a redacted path, category, and line number; never print the matched value. Any match is blocking, including documentation, examples, tests, loopback, private, and public addresses. Stop and ask the user to remove the content or exclude the path. Never commit or push a flagged match. If the scanner cannot run or inspect a blob, stop rather than treating the scan as clean.
+
 ## 1. Inspect the repository
 
-Determine:
+After reading repository instructions, run `<skill-dir>/scripts/git-review.py gate` as the first repository command. Do not scan the worktree, inspect status or hooks, fetch, review diffs, stage, commit, or push before this gate passes.
 
-- the repository root;
-- all applicable repository instructions;
-- the current branch;
-- the configured upstream branch and remote;
-- the remote default branch;
-- whether HEAD is detached;
-- whether a merge, rebase, cherry-pick, revert, or conflict is in progress;
-- all modified, deleted, renamed, staged, and untracked paths.
+The gate reports repository root, branch, upstream, remote names, detached state, in-progress operations, and conflicts without collecting general worktree status. Apply every stop rule below to this report.
 
-Stop and report without staging, committing, or pushing when:
+If `operations` reports a merge or rebase, or `conflicts` is non-empty, immediately:
+
+- warn that the repository is in the middle of that operation;
+- report the operation type and conflicted paths when safe;
+- state that the user must resolve, continue, skip, or abort it separately;
+- stop the workflow.
+
+Do not inspect or edit conflicted files, suggest resolutions, fetch, stage, commit, run hooks, or invoke `merge --continue`, `merge --abort`, `rebase --continue`, `rebase --skip`, or `rebase --abort`. A request to commit and push never authorizes finishing or cancelling an existing operation.
+
+Also stop immediately when:
 
 - HEAD is detached;
-- conflicts or an in-progress Git operation exist;
+- another in-progress Git operation exists, including cherry-pick or revert;
 - the current branch has no configured upstream;
-- the intended change ownership cannot be determined safely.
 
 When no upstream is configured, report the current branch and available remote names without printing potentially credential-bearing URLs. Do not run `git push -u` or create a remote branch.
 
+After the gate passes, run `<skill-dir>/scripts/check-sensitive-content.py --worktree`. Only after that passes, run `<skill-dir>/scripts/git-review.py inspect`. Its JSON provides redacted changed paths, rename-aware worktree counts, and top-level grouping. Stop if intended change ownership cannot be determined safely.
+
 ## 2. Check repository hook setup
 
-Look for repository-owned Git hook files or hook-manager configuration. Include conventions such as a configured hooks directory, Husky, pre-commit, Lefthook, or Overcommit. Do not treat Git's default `.git/hooks/*.sample` files as project hooks.
+Run `<skill-dir>/scripts/check-hooks.py`. It reports the effective hooks directory, repository hook-manager configuration, expected hooks, missing expected hooks, non-sample hook files, executable state, and a conservative status without executing hooks.
 
-Use repository instructions, setup documentation, package scripts, and manager configuration to determine how the hooks are intended to be activated. Inspect the effective `core.hooksPath`, the resolved Git hooks directory, and any relevant non-mutating hook-manager status check. Do not execute hook payloads merely to test setup.
+Use its evidence with repository instructions, setup documentation, package scripts, and manager configuration to determine how hooks are intended to be activated. Run an additional non-mutating manager status command only when needed. Do not execute hook payloads merely to test setup.
 
-If repository hook sources or configuration exist but the intended hooks appear inactive, missing, misconfigured, or cannot be verified as active:
+Treat only `verified-active` as confirmed active. If repository hook sources or configuration exist but the intended hooks appear inactive, missing, misconfigured, or cannot be verified as active:
 
 - show the hook files or configuration found;
 - show the concise evidence that setup is absent, broken, or uncertain;
@@ -63,13 +80,13 @@ Fetch the configured upstream remote before calculating outgoing commits. Fetch 
 
 If fetch fails, stop and report that the outgoing range cannot be verified reliably. Do not rely silently on stale remote-tracking refs.
 
-Compare HEAD with the refreshed configured upstream and calculate both ahead and behind counts.
+Immediately run `<skill-dir>/scripts/check-sensitive-content.py --range '@{upstream}..HEAD'` after the fetch. It also scans outgoing commit metadata. Only after it passes, run `<skill-dir>/scripts/git-review.py outgoing`. Use that script's JSON for ahead/behind state, commits, rename-aware files, aggregate diff statistics, top-level grouping, default-branch detection, and the exact push command.
 
 - If HEAD and the upstream have diverged, stop and report both counts.
 - If HEAD is only behind the upstream, stop and report that synchronization is required.
 - Do not pull, merge, or rebase to reconcile either state.
 
-Before doing any other work, identify every commit and file already waiting to be pushed.
+Before doing any other work, identify every commit and file already waiting to be pushed from that report.
 
 If existing outgoing commits are present, show:
 
@@ -87,7 +104,7 @@ If the worktree is clean and outgoing commits exist, skip commit preparation and
 
 ## 4. Apply the large-change gate
 
-Apply this gate separately to each changed-path set reviewed by the workflow: the existing outgoing range, the worktree, and the final outgoing range. Count logical paths, treating a rename as one path change.
+Apply this gate separately to each changed-path set reviewed by the workflow: the existing outgoing range, the worktree, and the final outgoing range. Use `git-review.py`'s logical path count, status counts, and top-level groups; a rename is already counted as one path.
 
 When the count exceeds 50, stop and show:
 
@@ -144,6 +161,8 @@ Review the staged name/status summary and staged patch. Confirm that:
 - no credential, secret, suspicious large file, or unrelated generated artifact is included;
 - the staged change is coherent enough for one commit.
 
+Run the staged sensitive-content gate. Do not commit when it reports a match or cannot complete.
+
 If the staged scope differs materially from the confirmed scope, stop and explain the difference.
 
 ## 8. Generate and create the commit
@@ -171,11 +190,11 @@ If verification, `git commit`, or a Git hook fails:
 
 Fetch the configured upstream remote again immediately before calculating the final outgoing range. If the fetch fails, stop and report that the range cannot be verified reliably.
 
-Compare HEAD with the newly refreshed upstream and recalculate ahead and behind counts. If the upstream is now ahead or has diverged, stop before presenting a push confirmation. Do not reconcile automatically.
+Run the final sensitive-content gate immediately after the fetch and before displaying outgoing metadata. Then run `<skill-dir>/scripts/git-review.py outgoing`. If its report shows the upstream is ahead or diverged, stop before presenting a push confirmation. Do not reconcile automatically.
 
 Calculate the complete outgoing range. It must include pre-existing outgoing commits as well as any newly created commit.
 
-Determine:
+Use the report to determine:
 
 - every outgoing commit;
 - every file added, modified, deleted, or renamed by the complete outgoing range;
