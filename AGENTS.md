@@ -20,6 +20,10 @@ Installed skill copies are runtime artifacts and may be stale or replaced. Treat
 
 There is no repo-wide build, test, lint, or typecheck command. Review the changed Markdown and diff directly. For a skill with scripts, run the smallest relevant script-level check available.
 
+## Git
+
+When committing changes in this repository, do not use the `commit-and-push` skill. This prohibition applies to both the repository copy and any copy installed in the current agent harness. Use direct Git commands and follow the user's explicit commit and push instructions instead.
+
 ## Repository map
 
 - `<skill-name>/SKILL.md`: canonical skill definition and workflow.
