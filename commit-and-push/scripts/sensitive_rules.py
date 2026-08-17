@@ -11,6 +11,14 @@ IPV4_CANDIDATE = re.compile(r"(?<![0-9.])(?:[0-9]{1,3}\.){3}[0-9]{1,3}(?![0-9.])
 IPV6_CANDIDATE = re.compile(
     r"(?<![0-9A-Fa-f:.])(?:[0-9A-Fa-f]{0,4}:){2,7}[0-9A-Fa-f]{0,4}(?![0-9A-Fa-f:.])"
 )
+DOCUMENTATION_NETWORKS = tuple(
+    ipaddress.ip_network(cidr)
+    for cidr in ("192.0.2.0/24", "198.51.100.0/24", "203.0.113.0/24", "2001:db8::/32")
+)
+VERSION_CONTEXT = re.compile(
+    r"(?:\b(?:v|ver|version|versions|rev|release|tag)\s*[:=]?\s*|[A-Za-z_]|==|>=|<=|~=|\^|~|@)$"
+)
+VERSION_SUFFIX = re.compile(r"[-+][A-Za-z][0-9A-Za-z.]*")
 SECRET_PATTERNS = (
     ("private key", re.compile(r"-----BEGIN [A-Z0-9 ]*PRIVATE KEY-----")),
     ("cloud access key", re.compile(r"\bAKIA[0-9A-Z]{16}\b")),
@@ -56,19 +64,35 @@ def line_number(text: str, offset: int) -> int:
     return text.count("\n", 0, offset) + 1
 
 
-def valid_ip(candidate: str) -> bool:
+def local_ip(address: ipaddress.IPv4Address | ipaddress.IPv6Address) -> bool:
+    return (
+        address.is_loopback
+        or address.is_unspecified
+        or address.is_private
+        or address.is_link_local
+        or any(address in network for network in DOCUMENTATION_NETWORKS)
+    )
+
+
+def version_literal(match: re.Match[str]) -> bool:
+    text = match.string
+    before = text[max(0, match.start() - 32) : match.start()]
+    return bool(VERSION_CONTEXT.search(before) or VERSION_SUFFIX.match(text, match.end()))
+
+
+def blocking_ip(match: re.Match[str]) -> bool:
     try:
-        ipaddress.ip_address(candidate)
-        return True
+        address = ipaddress.ip_address(match.group())
     except ValueError:
         return False
+    return not local_ip(address) and not version_literal(match)
 
 
 def text_findings(text: str) -> set[tuple[str, int]]:
     matches: set[tuple[str, int]] = set()
     for category, pattern in (("IPv4 address", IPV4_CANDIDATE), ("IPv6 address", IPV6_CANDIDATE)):
         for match in pattern.finditer(text):
-            if valid_ip(match.group()):
+            if blocking_ip(match):
                 matches.add((category, line_number(text, match.start())))
 
     for category, pattern in SECRET_PATTERNS:
@@ -93,7 +117,7 @@ def redact(text: str) -> str:
     redacted = text
     for pattern in (IPV4_CANDIDATE, IPV6_CANDIDATE):
         redacted = pattern.sub(
-            lambda match: "[REDACTED]" if valid_ip(match.group()) else match.group(),
+            lambda match: "[REDACTED]" if blocking_ip(match) else match.group(),
             redacted,
         )
     for _category, pattern in SECRET_PATTERNS:
