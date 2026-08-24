@@ -11,6 +11,12 @@ IPV4_CANDIDATE = re.compile(r"(?<![0-9.])(?:[0-9]{1,3}\.){3}[0-9]{1,3}(?![0-9.])
 IPV6_CANDIDATE = re.compile(
     r"(?<![0-9A-Fa-f:.])(?:[0-9A-Fa-f]{0,4}:){2,7}[0-9A-Fa-f]{0,4}(?![0-9A-Fa-f:.])"
 )
+CSS_PSEUDO_ELEMENT = re.compile(
+    r"::(?:after|backdrop|before|cue|cue-region|file-selector-button|first-letter|first-line|"
+    r"grammar-error|marker|part|placeholder|selection|slotted|spelling-error|target-text)"
+    r"(?![A-Za-z0-9_-])",
+    re.IGNORECASE,
+)
 DOCUMENTATION_NETWORKS = tuple(
     ipaddress.ip_network(cidr)
     for cidr in ("192.0.2.0/24", "198.51.100.0/24", "203.0.113.0/24", "2001:db8::/32")
@@ -80,12 +86,17 @@ def version_literal(match: re.Match[str]) -> bool:
     return bool(VERSION_CONTEXT.search(before) or VERSION_SUFFIX.match(text, match.end()))
 
 
+def css_pseudo_element(match: re.Match[str]) -> bool:
+    """Return whether an IPv6-shaped prefix is part of a CSS pseudo-element."""
+    return bool(CSS_PSEUDO_ELEMENT.match(match.string, match.start()))
+
+
 def blocking_ip(match: re.Match[str]) -> bool:
     try:
         address = ipaddress.ip_address(match.group())
     except ValueError:
         return False
-    return not local_ip(address) and not version_literal(match)
+    return not local_ip(address) and not version_literal(match) and not css_pseudo_element(match)
 
 
 def text_findings(text: str) -> set[tuple[str, int]]:

@@ -42,6 +42,7 @@ ALLOWED = (
     "node>=8.8.8.8",
     "1.2.3.4-rc1",
     "1.2.3.4+build",
+    joined("*", ":", ":before, *", ":", ":after"),
 )
 PUBLIC_V4 = joined("8.8", ".8.8")
 BLOCKED = (
