@@ -43,6 +43,10 @@ ALLOWED = (
     "1.2.3.4-rc1",
     "1.2.3.4+build",
     joined("*", ":", ":before, *", ":", ":after"),
+    joined("const apiKey = anth", "ropicKeyOrNull();"),
+    joined("const secret = en", "v.MY_SECRET;"),
+    joined("const token = proce", "ss.env.SECRET;"),
+    joined("const token = awa", "it vault.get('token');"),
 )
 PUBLIC_V4 = joined("8.8", ".8.8")
 BLOCKED = (
@@ -56,6 +60,9 @@ BLOCKED = (
 SECRETS = (
     joined("pass", "word: hunter2hunter2"),
     joined("-----BEGIN RSA ", "PRIVATE KEY-----"),
+    joined("const apiKey = 'sk-", "ant-real-looking-secret';"),
+    joined("headers.set('Authorization', 'Bearer gh", "p_real-looking-secret');"),
+    joined("const config = { token: 'real-", "looking-secret' };"),
 )
 
 
@@ -76,6 +83,7 @@ class SensitiveRules(unittest.TestCase):
         for value in SECRETS:
             with self.subTest(value=value):
                 self.assertTrue(text_findings(value))
+                self.assertIn("[REDACTED]", redact(value))
 
 
 if __name__ == "__main__":

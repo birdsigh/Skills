@@ -25,6 +25,7 @@ VERSION_CONTEXT = re.compile(
     r"(?:\b(?:v|ver|version|versions|rev|release|tag)\s*[:=]?\s*|[A-Za-z_]|==|>=|<=|~=|\^|~|@)$"
 )
 VERSION_SUFFIX = re.compile(r"[-+][A-Za-z][0-9A-Za-z.]*")
+CREDENTIAL_LITERAL = r"(?:[A-Za-z0-9]{12,}|[A-Za-z0-9][A-Za-z0-9._~+/=-]*[-_./+=][A-Za-z0-9._~+/=-]{6,})"
 SECRET_PATTERNS = (
     ("private key", re.compile(r"-----BEGIN [A-Z0-9 ]*PRIVATE KEY-----")),
     ("cloud access key", re.compile(r"\bAKIA[0-9A-Z]{16}\b")),
@@ -35,8 +36,17 @@ SECRET_PATTERNS = (
     (
         "credential assignment",
         re.compile(
-            r"\b(?:api[_-]?key|access[_-]?token|auth[_-]?token|client[_-]?secret|password|passwd)\b"
-            r"\s*[:=]\s*[\"']?[^\s\"'`,;]{8,}",
+            r"\b(?:api[_-]?key|access[_-]?token|auth[_-]?token|client[_-]?secret|password|passwd|token|secret|key)\b"
+            r"\s*[:=]\s*(?:[\"']" + CREDENTIAL_LITERAL + r"[\"']"
+            r"|(?!(?:(?:process\.)?env\b|await\b|[A-Za-z_][A-Za-z0-9_.]*\s*\())[A-Za-z0-9._~+/=-]{8,})",
+            re.IGNORECASE,
+        ),
+    ),
+    (
+        "authorization header",
+        re.compile(
+            r"\b(?:headers?\.)?set\(\s*[\"']authorization[\"']\s*,\s*[\"']"
+            r"(?:bearer\s+)?" + CREDENTIAL_LITERAL + r"[\"']",
             re.IGNORECASE,
         ),
     ),
