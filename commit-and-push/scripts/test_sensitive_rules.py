@@ -47,6 +47,13 @@ ALLOWED = (
     joined("const secret = en", "v.MY_SECRET;"),
     joined("const token = proce", "ss.env.SECRET;"),
     joined("const token = awa", "it vault.get('token');"),
+    joined("const headers = { 'x-api-key': api", "Key };"),
+    joined("const headers = { 'x-api-key': this.deps.api", "Key };"),
+    joined("const headers = { 'x-api-key': process.env.API", "_KEY };"),
+    joined("const headers = { Authorization: options.to", "ken };"),
+    joined("headers.set('Authorization', `Bearer ${to", "ken}`);"),
+    joined("const apiKey = 'sk-ant-", "test';"),
+    "function createClient(apiKey, token, secret) {}",
 )
 PUBLIC_V4 = joined("8.8", ".8.8")
 BLOCKED = (
@@ -58,11 +65,17 @@ BLOCKED = (
     f"range {PUBLIC_V4}-{joined('8.8', '.8.9')}",
 )
 SECRETS = (
-    joined("pass", "word: hunter2hunter2"),
+    joined("pass", "word: 'Abcdefghijklmnop0123456789+/='"),
     joined("-----BEGIN RSA ", "PRIVATE KEY-----"),
-    joined("const apiKey = 'sk-", "ant-real-looking-secret';"),
+    joined("const apiKey = 'sk-ant-", "abcdefghijklmnopqrstuvwxyz0123456789';"),
     joined("headers.set('Authorization', 'Bearer gh", "p_real-looking-secret');"),
-    joined("const config = { token: 'real-", "looking-secret' };"),
+    joined("Authorization: 'Bearer Abcdefghijklmnop", "0123456789+/='"),
+    joined("const config = { token: 'Abcdefghijkl", "mnop0123456789+/=' };"),
+    joined("const url = 'https", "://user:password@example.com';"),
+    joined("const jwt = 'eyJ", "hbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.signaturevalue';"),
+    joined("const github = 'gh", "p_abcdefghijklmnopqrstuvwxyz0123456789';"),
+    joined("const google = 'AI", "zaabcdefghijklmnopqrstuvwxyz012345678';"),
+    joined("const token = '0123456789abcdef", "0123456789abcdef01234567';"),
 )
 
 
@@ -84,6 +97,12 @@ class SensitiveRules(unittest.TestCase):
             with self.subTest(value=value):
                 self.assertTrue(text_findings(value))
                 self.assertIn("[REDACTED]", redact(value))
+
+    def test_credential_assignment_is_redacted(self):
+        value = joined("const config = { token: 'Abcdefghijkl", "mnop0123456789+/=' };")
+        secret = joined("Abcdefghijkl", "mnop0123456789+/=")
+        self.assertTrue(text_findings(value))
+        self.assertNotIn(secret, redact(value))
 
 
 if __name__ == "__main__":

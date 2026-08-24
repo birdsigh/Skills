@@ -25,31 +25,33 @@ VERSION_CONTEXT = re.compile(
     r"(?:\b(?:v|ver|version|versions|rev|release|tag)\s*[:=]?\s*|[A-Za-z_]|==|>=|<=|~=|\^|~|@)$"
 )
 VERSION_SUFFIX = re.compile(r"[-+][A-Za-z][0-9A-Za-z.]*")
-CREDENTIAL_LITERAL = r"(?:[A-Za-z0-9]{12,}|[A-Za-z0-9][A-Za-z0-9._~+/=-]*[-_./+=][A-Za-z0-9._~+/=-]{6,})"
+SENSITIVE_PROPERTY = (
+    r"(?:x[-_]?api[-_]?key|api[-_]?key|access[-_]?token|auth[-_]?token|"
+    r"client[-_]?secret|password|passwd|token|secret|key|authorization)"
+)
+QUOTED_CREDENTIAL_ASSIGNMENT = re.compile(
+    r"(?:[\"']" + SENSITIVE_PROPERTY + r"[\"']|\b" + SENSITIVE_PROPERTY + r"\b)"
+    r"\s*[:=]\s*(?:"
+    r'"(?P<double>(?:\\.|[^"\\\n])*)"'
+    r"|'(?P<single>(?:\\.|[^'\\\n])*)'"
+    r"|`(?P<template>(?:\\.|[^`\\\n])*)`"
+    r")",
+    re.IGNORECASE,
+)
+JWT = re.compile(r"\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\b")
+SK_TOKEN = re.compile(r"\bsk-[A-Za-z0-9_-]{20,}\b")
+GOOGLE_API_KEY = re.compile(r"\bAIza[A-Za-z0-9_-]{35}\b")
+OPAQUE_HEX_TOKEN = re.compile(r"[A-Fa-f0-9]{32,}")
 SECRET_PATTERNS = (
     ("private key", re.compile(r"-----BEGIN [A-Z0-9 ]*PRIVATE KEY-----")),
     ("cloud access key", re.compile(r"\bAKIA[0-9A-Z]{16}\b")),
     ("GitHub token", re.compile(r"\bgh[pousr]_[A-Za-z0-9]{20,255}\b")),
     ("live payment key", re.compile(r"\bsk_live_[A-Za-z0-9]{16,}\b")),
     ("chat service token", re.compile(r"\bxox[baprs]-[A-Za-z0-9-]{16,}\b")),
+    ("JSON web token", JWT),
+    ("API key", SK_TOKEN),
+    ("Google API key", GOOGLE_API_KEY),
     ("authorization token", re.compile(r"\bBearer\s+[A-Za-z0-9._~+/=-]{20,}", re.IGNORECASE)),
-    (
-        "credential assignment",
-        re.compile(
-            r"\b(?:api[_-]?key|access[_-]?token|auth[_-]?token|client[_-]?secret|password|passwd|token|secret|key)\b"
-            r"\s*[:=]\s*(?:[\"']" + CREDENTIAL_LITERAL + r"[\"']"
-            r"|(?!(?:(?:process\.)?env\b|await\b|[A-Za-z_][A-Za-z0-9_.]*\s*\())[A-Za-z0-9._~+/=-]{8,})",
-            re.IGNORECASE,
-        ),
-    ),
-    (
-        "authorization header",
-        re.compile(
-            r"\b(?:headers?\.)?set\(\s*[\"']authorization[\"']\s*,\s*[\"']"
-            r"(?:bearer\s+)?" + CREDENTIAL_LITERAL + r"[\"']",
-            re.IGNORECASE,
-        ),
-    ),
     ("credential-bearing URL", re.compile(r"\bhttps?://[^/\s:@]+:[^/\s@]+@", re.IGNORECASE)),
 )
 SENSITIVE_FILENAMES = {
@@ -101,6 +103,47 @@ def css_pseudo_element(match: re.Match[str]) -> bool:
     return bool(CSS_PSEUDO_ELEMENT.match(match.string, match.start()))
 
 
+def high_entropy(value: str) -> bool:
+    """Identify long token-like values without treating identifiers as credentials."""
+    if len(value) < 24 or any(character.isspace() for character in value):
+        return False
+    classes = sum(
+        (
+            any(character.islower() for character in value),
+            any(character.isupper() for character in value),
+            any(character.isdigit() for character in value),
+            any(character in "._~+/=-" for character in value),
+        )
+    )
+    return classes >= 3
+
+
+def credential_literal(value: str) -> bool:
+    """Return whether a static quoted value is credential-like."""
+    if "${" in value:
+        return False
+    return bool(
+        JWT.fullmatch(value)
+        or SK_TOKEN.fullmatch(value)
+        or GOOGLE_API_KEY.fullmatch(value)
+        or OPAQUE_HEX_TOKEN.fullmatch(value)
+        or high_entropy(value)
+    )
+
+
+def credential_assignments(text: str) -> set[tuple[str, int]]:
+    matches: set[tuple[str, int]] = set()
+    for match in QUOTED_CREDENTIAL_ASSIGNMENT.finditer(text):
+        value = next(
+            value
+            for value in (match.group("double"), match.group("single"), match.group("template"))
+            if value is not None
+        )
+        if credential_literal(value):
+            matches.add(("credential assignment", line_number(text, match.start())))
+    return matches
+
+
 def blocking_ip(match: re.Match[str]) -> bool:
     try:
         address = ipaddress.ip_address(match.group())
@@ -119,6 +162,7 @@ def text_findings(text: str) -> set[tuple[str, int]]:
     for category, pattern in SECRET_PATTERNS:
         for match in pattern.finditer(text):
             matches.add((category, line_number(text, match.start())))
+    matches.update(credential_assignments(text))
     return matches
 
 
@@ -143,4 +187,13 @@ def redact(text: str) -> str:
         )
     for _category, pattern in SECRET_PATTERNS:
         redacted = pattern.sub("[REDACTED]", redacted)
+    for match in reversed(list(QUOTED_CREDENTIAL_ASSIGNMENT.finditer(redacted))):
+        value = next(
+            value
+            for value in (match.group("double"), match.group("single"), match.group("template"))
+            if value is not None
+        )
+        if credential_literal(value):
+            start = match.start() + match.group().find(value)
+            redacted = redacted[:start] + "[REDACTED]" + redacted[start + len(value) :]
     return redacted
