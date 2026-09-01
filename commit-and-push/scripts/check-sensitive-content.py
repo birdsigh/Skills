@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import fnmatch
 import os
 from pathlib import Path
 import subprocess
@@ -23,6 +24,8 @@ ARCHIVE_SIGNATURES = (
     b"7z\xbc\xaf\x27\x1c",
     b"Rar!\x1a\x07",
 )
+
+
 def git(*args: str) -> bytes:
     result = subprocess.run(
         ("git", *args),
@@ -100,12 +103,46 @@ def is_archive(data: bytes) -> bool:
     )
 
 
-def blob_findings(data: bytes) -> set[tuple[str, int]]:
+def text_encoding(data: bytes) -> str | None:
+    sample = data[:8192]
+    if not sample:
+        return "utf-8"
+    if sample.startswith((b"\xff\xfe", b"\xfe\xff")):
+        encoding = "utf-16"
+    else:
+        if b"\x00" in sample:
+            return None
+        encoding = "utf-8"
+    try:
+        text = sample.decode(encoding)
+    except UnicodeDecodeError:
+        return None
+    controls = sum(
+        1
+        for character in text
+        if ord(character) < 32 and character not in "\t\n\r"
+    )
+    return encoding if controls / max(len(text), 1) <= 0.01 else None
+
+
+def is_probably_text(data: bytes) -> bool:
+    return text_encoding(data) is not None
+
+
+def blob_findings(data: bytes, force_text: bool = False) -> set[tuple[str, int]]:
     matches: set[tuple[str, int]] = set()
     if is_archive(data):
         matches.add(("archive file", 1))
-    matches.update(text_findings(data.decode("utf-8", errors="replace")))
+    encoding = text_encoding(data)
+    if encoding is not None:
+        matches.update(text_findings(data.decode(encoding)))
+    elif force_text:
+        matches.update(text_findings(data.decode("utf-8")))
     return matches
+
+
+def force_text_path(path: str, patterns: list[str]) -> bool:
+    return any(fnmatch.fnmatchcase(path, pattern) for pattern in patterns)
 
 
 def parse_args() -> argparse.Namespace:
@@ -115,6 +152,8 @@ def parse_args() -> argparse.Namespace:
     mode.add_argument("--range", dest="revision_range")
     mode.add_argument("--worktree", action="store_true")
     parser.add_argument("--max-bytes", type=int, default=DEFAULT_MAX_BYTES)
+    parser.add_argument("--verbose", action="store_true")
+    parser.add_argument("--force-text", action="append", default=[], metavar="GLOB")
     args = parser.parse_args()
     if args.max_bytes < 1:
         parser.error("--max-bytes must be positive")
@@ -136,10 +175,13 @@ def main() -> int:
             size = (Path.cwd() / path).lstat().st_size if args.worktree else blob_size(path, args.staged)
             if size > args.max_bytes:
                 findings.add(("oversized file", 1))
-            else:
-                data = worktree_blob(path) if args.worktree else blob(path, args.staged)
-                findings.update(blob_findings(data))
             safe_path = redact(path)
+            data = worktree_blob(path) if args.worktree else blob(path, args.staged)
+            forced = force_text_path(path, args.force_text)
+            textual = is_probably_text(data)
+            findings.update(blob_findings(data, force_text=forced))
+            if args.verbose and not textual and not forced:
+                print(f"info: {safe_path}: binary content, text rules skipped", file=sys.stderr)
             for category, line in sorted(findings):
                 print(f"blocked: {safe_path}:{line}: {category}", file=sys.stderr)
                 blocked = True
