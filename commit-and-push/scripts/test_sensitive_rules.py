@@ -35,6 +35,7 @@ ALLOWED = (
     "2001:db8::8a2e",
     "v1.2.3.4",
     "version 1.2.3.4",
+    "Chrome/124.0.0.0",
     "version: 1.2.3.4",
     "release 8.8.8.8",
     "package@1.2.3.4",
@@ -58,6 +59,7 @@ ALLOWED = (
 PUBLIC_V4 = joined("8.8", ".8.8")
 BLOCKED = (
     PUBLIC_V4,
+    f"https://{PUBLIC_V4}/",
     joined("1.1", ".1.1"),
     f"connect to {joined('51.15', '.200.7')} now",
     f"host={joined('203.0', '.114.9')}",
@@ -80,6 +82,13 @@ SECRETS = (
 
 
 class SensitiveRules(unittest.TestCase):
+    def test_browser_user_agent_versions_are_allowed_but_urls_are_not(self):
+        self.assertEqual(text_findings("Chrome/124.0.0.0"), set())
+        self.assertEqual(text_findings("chrome/124.0.0.0"), set())
+        self.assertTrue(text_findings(PUBLIC_V4))
+        self.assertTrue(text_findings(f"https://{PUBLIC_V4}/"))
+        self.assertTrue(text_findings(joined("Product/8.8.8", ".8")))
+
     def test_allowed_values_are_not_flagged(self):
         for value in ALLOWED:
             with self.subTest(value=value):

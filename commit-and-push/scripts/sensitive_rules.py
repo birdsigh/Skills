@@ -24,6 +24,10 @@ DOCUMENTATION_NETWORKS = tuple(
 VERSION_CONTEXT = re.compile(
     r"(?:\b(?:v|ver|version|versions|rev|release|tag)\s*[:=]?\s*|[A-Za-z_]|==|>=|<=|~=|\^|~|@)$"
 )
+BROWSER_UA_VERSION_CONTEXT = re.compile(
+    r"\b(?:Chrome|Chromium|CriOS|Edg|EdgA|EdgiOS|Firefox|FxiOS|OPR|Version)/$",
+    re.IGNORECASE,
+)
 VERSION_SUFFIX = re.compile(r"[-+][A-Za-z][0-9A-Za-z.]*")
 SENSITIVE_PROPERTY = (
     r"(?:x[-_]?api[-_]?key|api[-_]?key|access[-_]?token|auth[-_]?token|"
@@ -95,7 +99,11 @@ def local_ip(address: ipaddress.IPv4Address | ipaddress.IPv6Address) -> bool:
 def version_literal(match: re.Match[str]) -> bool:
     text = match.string
     before = text[max(0, match.start() - 32) : match.start()]
-    return bool(VERSION_CONTEXT.search(before) or VERSION_SUFFIX.match(text, match.end()))
+    return bool(
+        VERSION_CONTEXT.search(before)
+        or BROWSER_UA_VERSION_CONTEXT.search(before)
+        or VERSION_SUFFIX.match(text, match.end())
+    )
 
 
 def css_pseudo_element(match: re.Match[str]) -> bool:
